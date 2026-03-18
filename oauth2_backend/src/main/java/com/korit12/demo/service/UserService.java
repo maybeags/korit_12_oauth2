@@ -1,0 +1,34 @@
+package com.korit12.demo.service;
+
+import com.korit12.demo.dto.AuthResponseDto;
+import com.korit12.demo.dto.SignupRequestDto;
+import com.korit12.demo.entity.User;
+import com.korit12.demo.repository.UserRepository;
+import lombok.RequiredArgsConstructor;
+import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+@Service
+@RequiredArgsConstructor
+@Transactional(readOnly = true)
+public class UserService {
+
+    private final UserRepository userRepository;
+    private final PasswordEncoder passwordEncoder;
+    private final JwtService jwtService;
+
+    @Transactional
+    public AuthResponseDto signup(SignupRequestDto dto) {
+        if(userRepository.existsByEmail(dto.getEmail())) {
+            throw new IllegalArgumentException("이미 사용 중인 email입니다.");
+        }
+        // 비밀 번호는 input창 통해서 string으로 넘어왔을 겁니다. -> 암호화
+        String encodedPassword = passwordEncoder.encode(dto.getPassword());
+        User user = User.createLocalUser(dto.getEmail(), encodedPassword, dto.getName()); // 혹은 Builder 패턴 도입해도 됨.
+
+        // User field 자체에는 token이 없고 ResponseDto에서 붙여서 보낼겁니다.
+        String token = jwtService.generateToken(user.getEmail(), user.getRole().name());
+    }
+
+}
